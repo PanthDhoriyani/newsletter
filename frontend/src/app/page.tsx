@@ -13,14 +13,27 @@ import { useState } from "react";
 export default function FrontPage() {
   const { data, error, isLoading, mutate } = useDashboard();
   const [generating, setGenerating] = useState(false);
+  const [generateMsg, setGenerateMsg] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setGenerating(true);
-    await triggerManualGeneration();
-    setTimeout(() => {
-      mutate();
-      setGenerating(false);
-    }, 4000);
+    setGenerateMsg(null);
+    try {
+      const res = await triggerManualGeneration();
+      if (res.ok) {
+        setGenerateMsg("Publishing initiated! Generating multi-source edition in background...");
+      } else {
+        setGenerateMsg(`Server returned status ${res.status}`);
+      }
+    } catch (err: any) {
+      console.error("Failed to trigger generation:", err);
+      setGenerateMsg("Failed to connect to backend server. Please verify backend is running.");
+    } finally {
+      setTimeout(() => {
+        mutate();
+        setGenerating(false);
+      }, 5000);
+    }
   };
 
   return (
@@ -42,15 +55,20 @@ export default function FrontPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-end gap-2">
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="px-4 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded text-xs font-sans font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-stone-800 transition-all shadow-sm"
+            className="px-4 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded text-xs font-sans font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-stone-800 transition-all shadow-sm disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${generating ? "animate-spin" : ""}`} />
             {generating ? "Publishing Edition..." : "Trigger Live Publish"}
           </button>
+          {generateMsg && (
+            <p className="text-xs font-sans text-stone-600 dark:text-stone-300 italic">
+              {generateMsg}
+            </p>
+          )}
         </div>
       </div>
 
