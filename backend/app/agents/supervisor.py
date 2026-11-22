@@ -97,6 +97,12 @@ async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, A
             target_newsletter.knowledge_corner = knowledge_corner
             target_newsletter.what_to_watch_next = what_to_watch_next
             target_newsletter.is_immutable = True
+
+            # Get existing headlines to prevent duplicate articles within the same day
+            existing_articles_res = await db.execute(select(Article).where(Article.newsletter_id == edition_id))
+            existing_articles = existing_articles_res.scalars().all()
+            existing_headlines = {a.headline.strip().lower() for a in existing_articles}
+            articles_to_insert = [a for a in articles if a.get("headline", "").strip().lower() not in existing_headlines]
         else:
             target_newsletter = Newsletter(
                 id=edition_id,
@@ -112,19 +118,10 @@ async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, A
                 is_immutable=True
             )
             db.add(target_newsletter)
+            articles_to_insert = articles
 
-        critical_c = 0
-        high_c = 0
-        moderate_c = 0
-
-        for a in articles:
+        for a in articles_to_insert:
             imp = a.get("importance", "MODERATE")
-            if imp == "CRITICAL":
-                critical_c += 1
-            elif imp == "HIGH":
-                high_c += 1
-            else:
-                moderate_c += 1
 
             article_obj = Article(
                 id=a.get("id"),
@@ -160,21 +157,31 @@ async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, A
                 )
                 db.add(source_obj)
 
-        target_newsletter.total_articles = len(articles)
-        target_newsletter.critical_count = critical_c
-        target_newsletter.high_count = high_c
-        target_newsletter.moderate_count = moderate_c
+        await db.flush()
 
-        # Add edition progress record
-        progress = EditionProgress(
-            id=str(uuid.uuid4()),
-            newsletter_id=edition_id,
-            status=EditionStatus.UNREAD,
-            total_articles=len(articles),
-            articles_read=0,
-            summary_read=False
-        )
-        db.add(progress)
+        # Update article counts for the edition
+        all_articles_res = await db.execute(select(Article).where(Article.newsletter_id == edition_id))
+        all_articles = all_articles_res.scalars().all()
+        target_newsletter.total_articles = len(all_articles)
+        target_newsletter.critical_count = sum(1 for art in all_articles if art.importance == ArticleImportance.CRITICAL)
+        target_newsletter.high_count = sum(1 for art in all_articles if art.importance == ArticleImportance.HIGH)
+        target_newsletter.moderate_count = sum(1 for art in all_articles if art.importance == ArticleImportance.MODERATE)
+
+        # Update or create edition progress record
+        prog_res = await db.execute(select(EditionProgress).where(EditionProgress.newsletter_id == edition_id))
+        existing_prog = prog_res.scalar_one_or_none()
+        if existing_prog:
+            existing_prog.total_articles = len(all_articles)
+        else:
+            progress = EditionProgress(
+                id=str(uuid.uuid4()),
+                newsletter_id=edition_id,
+                status=EditionStatus.UNREAD,
+                total_articles=len(all_articles),
+                articles_read=0,
+                summary_read=False
+            )
+            db.add(progress)
 
         await db.commit()
 
