@@ -18,6 +18,16 @@ from app.agents.summary_agent import generate_daily_edition_summary
 
 log = structlog.get_logger()
 
+async def update_pipeline_phase(phase_text: str):
+    try:
+        async with AsyncSessionLocal() as db:
+            from app.models.scheduler_state import SchedulerState
+            from sqlalchemy import update
+            await db.execute(update(SchedulerState).where(SchedulerState.id == 1).values(last_status=phase_text, is_running=True))
+            await db.commit()
+    except Exception:
+        pass
+
 async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, Any]:
     """
     Complete end-to-end multi-agent orchestration for digital newspaper generation:
@@ -39,6 +49,7 @@ async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, A
     log.info("orchestrator_starting_edition", date=str(edition_date))
 
     # Phase 1: News Collection
+    await update_pipeline_phase("Phase 1/7: Collecting news from 14+ wire sources...")
     raw_clusters = await collection_manager.collect_all(start_dt, end_dt)
     if not raw_clusters:
         log.warning("no_clusters_collected_falling_back_to_seed")
@@ -60,25 +71,32 @@ async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, A
         }]
 
     # Phase 2: Verification
+    await update_pipeline_phase(f"Phase 2/7: Verifying facts across {len(raw_clusters)} story clusters...")
     verified = await verify_clusters(raw_clusters)
 
     # Phase 3: Deduplication & Story Tracking
+    await update_pipeline_phase("Phase 3/7: Tracking ongoing storylines...")
     tracked = await deduplicate_and_track_stories(verified)
 
     # Phase 4: Classification (Groq Llama)
+    await update_pipeline_phase("Phase 4/7: Classifying importance (Critical, High, Moderate)...")
     classified = await classify_clusters(tracked)
 
     # Phase 5: Article Generation (Gemini Flash)
+    await update_pipeline_phase("Phase 5/7: Writing fact-anchored articles with Gemini...")
     articles = await write_all_articles(classified)
 
     # Phase 6: Knowledge Corner & Watch Next
+    await update_pipeline_phase("Phase 6/7: Assembling Knowledge Corner & Watch Next radar...")
     knowledge_corner = await generate_knowledge_corner(articles)
     what_to_watch_next = await generate_what_to_watch_next(articles)
 
     # Phase 7: Daily Edition Summary (Run AFTER articles are locked!)
+    await update_pipeline_phase("Phase 7/7: Synthesizing Daily Edition Summary...")
     daily_summary = await generate_daily_edition_summary(articles)
 
     # Phase 8: Immutable Database Commit
+    await update_pipeline_phase("Finalizing and committing edition to database...")
     edition_id = str(uuid.uuid4())
     async with AsyncSessionLocal() as db:
         # Check if an edition already exists for today

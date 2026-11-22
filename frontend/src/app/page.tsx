@@ -36,20 +36,16 @@ export default function FrontPage() {
   const startPolling = () => {
     if (pollRef.current) clearInterval(pollRef.current);
 
-    let tick = 0;
     pollRef.current = setInterval(async () => {
-      tick++;
       try {
         const status = await getGenerationStatus();
 
         if (status.is_generating) {
-          // Dynamic status message while agents work
-          if (tick % 3 === 1) {
-            setGenerateMsg("AI Agents collecting and verifying stories from 14+ wire sources...");
-          } else if (tick % 3 === 2) {
-            setGenerateMsg("Gemini & Groq synthesizing fact-anchored articles with zero-hallucinations...");
+          // Live status message reported directly by the agent pipeline in real time
+          if (status.last_status && status.last_status !== "IDLE") {
+            setGenerateMsg(status.last_status);
           } else {
-            setGenerateMsg("Finalizing Daily Edition Summary, Knowledge Corner & radar...");
+            setGenerateMsg("AI agents actively researching and compiling today's edition...");
           }
         } else {
           // Generation has finished or stopped
@@ -73,7 +69,7 @@ export default function FrontPage() {
       } catch (err) {
         console.warn("Polling status error:", err);
       }
-    }, 2500);
+    }, 2000);
   };
 
   const handleGenerate = async () => {

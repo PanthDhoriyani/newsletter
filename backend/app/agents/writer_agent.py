@@ -84,16 +84,23 @@ async def write_all_articles(clusters: List[Dict[str, Any]]) -> List[Dict[str, A
     # We prioritize CRITICAL and HIGH, and cover all categories
     log.info("writer_agent_starting", clusters_to_write=len(clusters))
     
-    # Process up to 25 top comprehensive articles for a full daily edition
+    # Select top 8 key articles per edition to stay within free-tier RPM/TPM quotas
     sorted_clusters = sorted(
         clusters,
         key=lambda x: (
             0 if x.get("importance") == "CRITICAL" else (1 if x.get("importance") == "HIGH" else 2),
             -float(x.get("india_relevance_score", 0))
         )
-    )[:25]
+    )[:8]
 
-    tasks = [write_single_article(c) for c in sorted_clusters]
+    sem = asyncio.Semaphore(2)
+    async def bounded_write(c):
+        async with sem:
+            res = await write_single_article(c)
+            await asyncio.sleep(1.0)
+            return res
+
+    tasks = [bounded_write(c) for c in sorted_clusters]
     articles = await asyncio.gather(*tasks)
     log.info("articles_written_total", count=len(articles))
     return list(articles)

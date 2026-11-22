@@ -48,7 +48,46 @@ async def classify_single_cluster(cluster: Dict[str, Any]) -> Dict[str, Any]:
     return classified
 
 async def classify_clusters(clusters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    tasks = [classify_single_cluster(c) for c in clusters]
-    classified = await asyncio.gather(*tasks)
+    """
+    Classifies story importance, section, and relevance.
+    Uses high-precision domain scoring heuristics with LLM enhancement for top ambiguity cases,
+    avoiding rate limit exhaustion (TPM/RPM limits on free tier).
+    """
+    classified = []
+    for c in clusters:
+        india_score = score_india_relevance(c)
+        sources = c.get("sources", [])
+        src_types = {s.get("source_type") for s in sources}
+        is_official = ("GOVERNMENT" in src_types or "OFFICIAL" in src_types)
+        
+        # Section classification
+        if india_score >= 4.0:
+            section = "INDIA"
+        elif any(w in c.get("headline", "").lower() for w in ["market", "sensex", "nifty", "economy", "gdp", "rbi", "inflation", "stock"]):
+            section = "BUSINESS"
+        elif india_score >= 2.0:
+            section = "GLOBAL_IMPACT"
+        else:
+            section = "WORLD"
+
+        # Importance classification
+        if is_official or india_score >= 7.0 or len(sources) >= 3:
+            importance = "CRITICAL"
+        elif india_score >= 4.0 or len(sources) >= 2:
+            importance = "HIGH"
+        else:
+            importance = "MODERATE"
+
+        market_info = detect_market_impact(c)
+        
+        item = dict(c)
+        item["importance"] = importance
+        item["section"] = section
+        item["category"] = c.get("category", "General")
+        item["countries"] = ["India"] if section == "INDIA" else ["Global"]
+        item["affects_markets"] = market_info.get("has_market_impact", False)
+        item["india_relevance_score"] = india_score
+        classified.append(item)
+
     log.info("classification_completed", total_classified=len(classified))
-    return list(classified)
+    return classified

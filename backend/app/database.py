@@ -66,6 +66,12 @@ else:
         async def commit(self):
             self._sync.commit()
 
+        async def flush(self):
+            self._sync.flush()
+
+        async def refresh(self, instance):
+            self._sync.refresh(instance)
+
         async def rollback(self):
             self._sync.rollback()
 
