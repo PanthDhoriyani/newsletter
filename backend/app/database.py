@@ -6,28 +6,12 @@ from app.config import settings
 class Base(DeclarativeBase):
     pass
 
-# Check if aiosqlite or asyncpg is available for async engine
-use_async = True
-try:
-    if "sqlite" in settings.database_url:
-        import aiosqlite
-    elif "postgres" in settings.database_url:
-        import asyncpg
-except ImportError:
-    use_async = False
+db_url = settings.database_url
 
-if use_async:
+# Determine driver
+if "asyncpg" in db_url:
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-    connect_args = {}
-    if "sqlite" in settings.database_url:
-        connect_args = {"check_same_thread": False}
-
-    engine = create_async_engine(
-        settings.database_url,
-        echo=False,
-        connect_args=connect_args,
-        pool_pre_ping=True
-    )
+    engine = create_async_engine(db_url, echo=False, pool_pre_ping=True)
     AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
     async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -44,15 +28,21 @@ if use_async:
         from app.models import Base as ModelBase
         async with engine.begin() as conn:
             await conn.run_sync(ModelBase.metadata.create_all)
+
 else:
-    # Standard SQLite fallback for local running environments where aiosqlite is not yet installed
+    # Standard PostgreSQL (psycopg2) or SQLite engine with async wrapper
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker, Session
-    sync_url = settings.database_url.replace("sqlite+aiosqlite://", "sqlite://")
-    engine = create_engine(sync_url, connect_args={"check_same_thread": False})
+
+    # Clean URL for psycopg2 if needed
+    clean_url = db_url.replace("sqlite+aiosqlite://", "sqlite://")
+    connect_args = {}
+    if "sqlite" in clean_url:
+        connect_args["check_same_thread"] = False
+
+    engine = create_engine(clean_url, connect_args=connect_args, pool_pre_ping=True)
     SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    # Asynchronous adapter wrapper
     class AsyncSessionAdapter:
         def __init__(self, sync_session: Session):
             self._sync = sync_session
