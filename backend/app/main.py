@@ -12,6 +12,15 @@ setup_logging()
 async def lifespan(app: FastAPI):
     # Startup
     await create_all_tables()
+    try:
+        from app.database import AsyncSessionLocal
+        from app.models.scheduler_state import SchedulerState
+        from sqlalchemy import update
+        async with AsyncSessionLocal() as db:
+            await db.execute(update(SchedulerState).where(SchedulerState.id == 1).values(is_running=False))
+            await db.commit()
+    except Exception:
+        pass
     start_scheduler()
     yield
     # Shutdown

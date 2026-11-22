@@ -6,7 +6,7 @@ from app.config import settings
 log = structlog.get_logger()
 
 class GroqClient:
-    def __init__(self, model: str = "llama-3.1-70b-versatile"):
+    def __init__(self, model: str = "openai/gpt-oss-120b"):
         self.api_key = settings.groq_api_key
         self.model = model
         self.base_url = "https://api.groq.com/openai/v1/chat/completions"

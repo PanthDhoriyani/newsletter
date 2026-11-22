@@ -9,7 +9,7 @@ log = structlog.get_logger()
 class GeminiClient:
     def __init__(self):
         self.api_key = settings.gemini_api_key
-        self.model = "gemini-1.5-flash"
+        self.model = "gemini-3.1-flash-lite"
         self.base_url = "https://generativelanguage.googleapis.com/v1beta/models"
 
     async def generate(self, system_prompt: str, user_prompt: str) -> str:

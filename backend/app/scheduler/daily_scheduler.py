@@ -36,8 +36,15 @@ async def run_daily_generation_job():
     async with AsyncSessionLocal() as db:
         state = await get_or_create_state(db)
         if state.is_running:
-            log.warning("generation_already_running_skipping_duplicate_trigger")
-            return
+            # Check for stale lock (> 5 minutes old)
+            now_utc = datetime.utcnow()
+            if state.last_generation_start and (now_utc - state.last_generation_start).total_seconds() > 300:
+                log.warning("stale_generation_lock_detected_auto_recovering")
+                state.is_running = False
+                await db.commit()
+            else:
+                log.warning("generation_already_running_skipping_duplicate_trigger")
+                return
 
         start_time, end_time = await get_current_coverage_window(db)
         await set_generation_start(db, start_time, end_time)
