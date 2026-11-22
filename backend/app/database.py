@@ -36,6 +36,11 @@ else:
 
     # Clean URL for psycopg2 if needed
     clean_url = db_url.replace("sqlite+aiosqlite://", "sqlite://")
+    if clean_url.startswith("postgres://"):
+        clean_url = clean_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif clean_url.startswith("postgresql://") and "+psycopg2" not in clean_url and "+asyncpg" not in clean_url and "+psycopg" not in clean_url:
+        clean_url = clean_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
     connect_args = {}
     if "sqlite" in clean_url:
         connect_args["check_same_thread"] = False
