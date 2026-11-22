@@ -33,6 +33,8 @@ class Article(Base):
     tags = Column(JSON, default=list)
     countries = Column(JSON, default=list)
     market_impact = Column(JSON, nullable=True)
+    simplified_summary = Column(Text, nullable=True)
+    explained_terms = Column(JSON, default=list)
     
     published_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

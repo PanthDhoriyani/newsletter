@@ -22,6 +22,7 @@ class ArticleListItem(BaseModel):
     category: str
     importance: ArticleImportance
     introduction: Optional[str] = None
+    simplified_summary: Optional[str] = None
     published_at: datetime
     read_status: Optional[str] = "UNREAD"
     source_count: Optional[int] = 1
@@ -47,6 +48,8 @@ class ArticleRead(BaseModel):
     tags: List[str] = []
     countries: List[str] = []
     market_impact: Optional[Dict[str, Any]] = None
+    simplified_summary: Optional[str] = None
+    explained_terms: Optional[List[Dict[str, str]]] = []
     published_at: datetime
     is_ongoing_story: bool = False
     ongoing_story_id: Optional[str] = None

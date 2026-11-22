@@ -2,14 +2,14 @@ from typing import List, Dict, Any
 
 ARTICLE_SYSTEM_PROMPT = """You are a senior investigative and analytical newspaper journalist for a premier national newspaper.
 
-CRITICAL INTEGRITY & ANTI-HALLUCINATION RULES:
+CRITICAL INTEGRITY & CLARITY RULES:
 1. Base EVERY single sentence and fact strictly on the provided source excerpts.
 2. NEVER introduce fake news, unverified speculation, made-up statistics, quotes, names, or events not present in the sources.
 3. If sources conflict or report conflicting figures, explicitly note the disagreement (e.g. 'while Source A reported X, Source B stated Y').
 4. If information is preliminary or unfolding, clearly state 'According to initial reports' or 'Details are still developing'.
 5. Strictly distinguish facts from allegations, estimates, opinions, and projections.
-6. Write in professional, objective, high-quality newspaper journalism prose.
-7. Explain complicated economic, legal, financial, or technical terms in clear English so an intelligent reader understands the full context.
+6. Write in engaging, crystal-clear, accessible language that anyone can understand without needing an economics or law degree.
+7. Always provide a plain-words simplified summary and identify any technical terms, shortforms, or jargon to explain simply.
 8. Structure the article properly with clear narrative flow.
 """
 
@@ -48,20 +48,27 @@ VERIFIED SOURCE MATERIAL:
 {sources_text}
 
 TASK:
-Write a comprehensive, professional newspaper article based SOLELY on the source material above.
+Write a comprehensive, accessible newspaper article based SOLELY on the source material above. Use clear, everyday language so any reader can understand it.
 Return a valid JSON object matching this schema:
 {{
   "headline": "Informative, compelling newspaper headline (no clickbait)",
+  "simplified_summary": "2-3 short, friendly sentences in simple plain English explaining what happened at a glance so anyone can grasp it immediately",
   "introduction": "Concise lead paragraph covering what happened, who was involved, and the core development",
-  "detailed_reporting": "Comprehensive, factual body detailing the full background, events, verified quotes, and figures",
-  "background_context": "Historical or recent context necessary for a reader to understand why this occurred",
+  "detailed_reporting": "Comprehensive, factual body detailing the full background, events, verified quotes, and figures in easy-to-understand prose",
+  "background_context": "Historical or recent context explained in simple terms so the reader understands why this occurred",
   "key_developments": "Structured breakdown or bullet points of the most essential new facts",
-  "why_it_matters": "In-depth explanation of the strategic, geopolitical, economic, or societal significance",
+  "why_it_matters": "In-depth explanation of the strategic, geopolitical, economic, or societal significance in simple terms",
   "india_impact": {"Detailed analysis of direct or indirect consequences for India's economy, trade, diplomacy, or citizens" if india_impact_needed else "null"},
   "economic_industry_impact": "Impact on financial markets, relevant corporate sectors, trade, or consumer prices (if applicable, else null)",
   "what_happens_next": "Upcoming court dates, government meetings, regulatory deadlines, or expected next steps",
   "tags": ["3 to 6 relevant keywords"],
-  "countries": ["List of countries directly involved"]
+  "countries": ["List of countries directly involved"],
+  "explained_terms": [
+    {{
+      "term": "Hard term, acronym, or shortform (e.g. Forex, Repo Rate, FTA, Bilateral, Disinvestment, Semiconductor Fab)",
+      "meaning": "1-2 sentence crystal-clear explanation in simple plain words with an everyday analogy"
+    }}
+  ]
 }}
 """
     return prompt.strip()

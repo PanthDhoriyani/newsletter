@@ -26,10 +26,34 @@ export default function ArticleCard({ article }: { article: Article }) {
           </h3>
         </Link>
 
-        {article.introduction && (
+        {article.simplified_summary ? (
+          <div className="mt-2.5">
+            <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block mb-1">
+              Plain Words:
+            </span>
+            <p className="text-stone-700 dark:text-stone-300 text-sm line-clamp-3 font-body leading-relaxed">
+              {article.simplified_summary}
+            </p>
+          </div>
+        ) : article.introduction ? (
           <p className="text-stone-700 dark:text-stone-300 text-sm mt-2.5 line-clamp-3 font-body leading-relaxed">
             {article.introduction}
           </p>
+        ) : null}
+
+        {article.explained_terms && article.explained_terms.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {article.explained_terms.slice(0, 3).map((t, idx) => (
+              <span key={idx} className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 rounded text-[10px] font-mono">
+                {t.term}
+              </span>
+            ))}
+            {article.explained_terms.length > 3 && (
+              <span className="text-[10px] text-stone-400 self-center">
+                +{article.explained_terms.length - 3} terms
+              </span>
+            )}
+          </div>
         )}
 
         {article.why_it_matters && (

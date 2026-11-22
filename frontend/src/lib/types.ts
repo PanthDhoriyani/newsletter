@@ -30,6 +30,8 @@ export interface Article {
     has_market_impact?: boolean;
     affected_markets?: string[];
   };
+  simplified_summary?: string;
+  explained_terms?: Array<{ term: string; meaning: string }>;
   published_at: string;
   is_ongoing_story?: boolean;
   sources: NewsSource[];

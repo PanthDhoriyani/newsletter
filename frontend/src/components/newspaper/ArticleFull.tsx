@@ -6,7 +6,7 @@ import { Article } from "@/lib/types";
 import { ImportanceBadge, SectionBadge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { markArticleStatus } from "@/lib/api";
-import { Check, Bookmark, Share2, ExternalLink, ArrowLeft } from "lucide-react";
+import { Check, Bookmark, Share2, ExternalLink, ArrowLeft, Sparkles, HelpCircle, BookOpen } from "lucide-react";
 
 export default function ArticleFull({ article }: { article: Article }) {
   const [isRead, setIsRead] = useState(article.read_status === "READ");
@@ -78,9 +78,46 @@ export default function ArticleFull({ article }: { article: Article }) {
       </h1>
 
       {/* Subhead / Publication Details */}
-      <div className="text-xs text-stone-500 font-sans border-b border-stone-200 dark:border-stone-800 pb-4 mb-8">
+      <div className="text-xs text-stone-500 font-sans border-b border-stone-200 dark:border-stone-800 pb-4 mb-6">
         Published on {formatDate(article.published_at)} • Comprehensive Multi-Source Editorial
       </div>
+
+      {/* In Plain Words (Simple Summary) Callout */}
+      {article.simplified_summary && (
+        <div className="mb-8 p-4 bg-amber-50/90 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800/60 shadow-sm">
+          <div className="flex items-center gap-1.5 text-xs font-sans font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 mb-1.5">
+            <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            In Plain Words • Quick Simple Summary
+          </div>
+          <p className="text-sm font-sans text-stone-800 dark:text-stone-200 leading-relaxed font-medium">
+            {article.simplified_summary}
+          </p>
+        </div>
+      )}
+
+      {/* Jargon Buster • Terms & Acronyms Explained */}
+      {article.explained_terms && article.explained_terms.length > 0 && (
+        <div className="mb-8 p-5 bg-stone-50 dark:bg-stone-900/90 rounded border-2 border-stone-200 dark:border-stone-800 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <HelpCircle className="w-4 h-4 text-accent" />
+            <h3 className="newspaper-title text-base font-bold uppercase tracking-wider text-ink dark:text-ink-dark">
+              Jargon Buster • Terms & Shortforms Explained Simply
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {article.explained_terms.map((item, idx) => (
+              <div key={idx} className="p-3 bg-white dark:bg-stone-800/80 rounded border border-stone-200 dark:border-stone-700/60">
+                <span className="inline-block px-2 py-0.5 bg-accent/10 text-accent font-sans font-bold text-xs rounded mb-1">
+                  {item.term}
+                </span>
+                <p className="text-xs text-stone-700 dark:text-stone-300 font-sans leading-relaxed">
+                  {item.meaning}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Lead Paragraph */}
       {article.introduction && (

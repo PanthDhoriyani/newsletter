@@ -75,6 +75,8 @@ async def write_single_article(cluster: Dict[str, Any]) -> Dict[str, Any]:
         "tags": article_data.get("tags", []),
         "countries": article_data.get("countries", []),
         "market_impact": {"affects_markets": cluster.get("affects_markets", False)},
+        "simplified_summary": article_data.get("simplified_summary") or article_data.get("introduction", ""),
+        "explained_terms": article_data.get("explained_terms", []),
         "published_at": cluster.get("published_at"),
         "is_ongoing_story": cluster.get("is_ongoing_story", False),
         "sources": formatted_sources

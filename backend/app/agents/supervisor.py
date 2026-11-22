@@ -159,6 +159,8 @@ async def run_newspaper_pipeline(coverage_window: Dict[str, str]) -> Dict[str, A
                 tags=a.get("tags", []),
                 countries=a.get("countries", []),
                 market_impact=a.get("market_impact", {}),
+                simplified_summary=a.get("simplified_summary"),
+                explained_terms=a.get("explained_terms", []),
                 published_at=datetime.fromisoformat(a.get("published_at")) if a.get("published_at") else datetime.utcnow()
             )
             db.add(article_obj)
