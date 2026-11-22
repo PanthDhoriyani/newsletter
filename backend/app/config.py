@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     secret_key: str = "digital_newspaper_secret_key_super_secure_2026_x99"
     log_level: str = "INFO"
     frontend_url: str = "http://localhost:3000"
-    cors_origins: Union[List[str], str] = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+    cors_origins: Union[List[str], str] = ["*"]
     sentry_dsn: str = ""
     gemini_daily_limit: int = 1000
     groq_daily_token_limit: int = 200000
