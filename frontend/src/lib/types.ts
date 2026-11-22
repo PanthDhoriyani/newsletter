@@ -128,6 +128,8 @@ export interface DashboardData {
     moderate_count: number;
     summary_preview?: any[];
   };
+  is_generating?: boolean;
+  generation_status?: string;
   breaking_news: BreakingNews[];
   top_stories: Array<{
     id: string;

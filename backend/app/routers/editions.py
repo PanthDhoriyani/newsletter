@@ -120,6 +120,24 @@ async def get_edition_overview(edition_id: str, db: AsyncSession = Depends(get_d
         reading_percentage=0.0
     )
 
+@router.get("/status")
+async def get_generation_status(db: AsyncSession = Depends(get_db)):
+    """Returns the live status of the generation pipeline."""
+    from app.models.scheduler_state import SchedulerState
+    stmt = select(SchedulerState).where(SchedulerState.id == 1)
+    res = await db.execute(stmt)
+    state = res.scalar_one_or_none()
+    if not state:
+        return {"is_generating": False, "last_status": "IDLE"}
+    return {
+        "is_generating": state.is_running,
+        "last_status": state.last_status or "IDLE",
+        "last_generation_start": state.last_generation_start.isoformat() if state.last_generation_start else None,
+        "last_generation_end": state.last_generation_end.isoformat() if state.last_generation_end else None,
+        "last_successful_cutoff": state.last_successful_cutoff.isoformat() if state.last_successful_cutoff else None,
+        "retry_count": state.retry_count
+    }
+
 @router.post("/generate")
 async def trigger_manual_generation(background_tasks: BackgroundTasks):
     """Allows triggering immediate generation out of schedule."""

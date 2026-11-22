@@ -53,3 +53,11 @@ export async function triggerManualGeneration() {
     method: "POST"
   });
 }
+
+export async function getGenerationStatus(): Promise<{ is_generating: boolean; last_status: string }> {
+  const res = await fetch(`${API_BASE}/api/editions/status`);
+  if (!res.ok) {
+    throw new Error(`Status check failed: ${res.statusText}`);
+  }
+  return res.json();
+}

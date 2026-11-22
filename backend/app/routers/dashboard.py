@@ -55,8 +55,15 @@ async def get_dashboard_data(db: AsyncSession = Depends(get_db)):
     stmt_saved = select(Article).join(SavedArticle).limit(5)
     saved_items = (await db.execute(stmt_saved)).scalars().all()
 
+    # 5. Generation Status
+    from app.models.scheduler_state import SchedulerState
+    stmt_sched = select(SchedulerState).where(SchedulerState.id == 1)
+    sched_state = (await db.execute(stmt_sched)).scalar_one_or_none()
+
     return {
         "today_edition": edition_info,
+        "is_generating": sched_state.is_running if sched_state else False,
+        "generation_status": sched_state.last_status if sched_state else "IDLE",
         "breaking_news": [
             {
                 "id": b.id,

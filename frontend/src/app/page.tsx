@@ -1,38 +1,101 @@
 "use client";
 
 import Link from "next/link";
-import { useDashboard, triggerManualGeneration } from "@/lib/api";
+import { useDashboard, triggerManualGeneration, getGenerationStatus } from "@/lib/api";
 import BreakingNewsBanner from "@/components/dashboard/BreakingNewsBanner";
 import ArticleCard from "@/components/newspaper/ArticleCard";
 import SectionHeader from "@/components/newspaper/SectionHeader";
 import { ArticleCardSkeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
-import { Newspaper, Flame, RefreshCw, Calendar, ArrowRight, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Newspaper, Flame, RefreshCw, Calendar, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 export default function FrontPage() {
   const { data, error, isLoading, mutate } = useDashboard();
   const [generating, setGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync state if server reports active generation on initial load
+  useEffect(() => {
+    if (data?.is_generating && !generating) {
+      setGenerating(true);
+      setGenerateMsg("AI agents are currently researching and publishing today's edition...");
+      startPolling();
+    }
+  }, [data?.is_generating]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    let tick = 0;
+    pollRef.current = setInterval(async () => {
+      tick++;
+      try {
+        const status = await getGenerationStatus();
+
+        if (status.is_generating) {
+          // Dynamic status message while agents work
+          if (tick % 3 === 1) {
+            setGenerateMsg("AI Agents collecting and verifying stories from 14+ wire sources...");
+          } else if (tick % 3 === 2) {
+            setGenerateMsg("Gemini & Groq synthesizing fact-anchored articles with zero-hallucinations...");
+          } else {
+            setGenerateMsg("Finalizing Daily Edition Summary, Knowledge Corner & radar...");
+          }
+        } else {
+          // Generation has finished or stopped
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setGenerating(false);
+
+          if (status.last_status === "SUCCESS") {
+            setIsError(false);
+            setGenerateMsg("Today's newspaper published successfully!");
+            mutate();
+          } else if (status.last_status && status.last_status.startsWith("FAILED")) {
+            setIsError(true);
+            setGenerateMsg(`Publication stopped: ${status.last_status}`);
+          } else {
+            setIsError(false);
+            setGenerateMsg(null);
+            mutate();
+          }
+        }
+      } catch (err) {
+        console.warn("Polling status error:", err);
+      }
+    }, 2500);
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setGenerateMsg(null);
+    setIsError(false);
+    setGenerateMsg("Initiating multi-agent news pipeline...");
+
     try {
       const res = await triggerManualGeneration();
-      if (res.ok) {
-        setGenerateMsg("Publishing initiated! Generating multi-source edition in background...");
-      } else {
-        setGenerateMsg(`Server returned status ${res.status}`);
+      if (!res.ok) {
+        setGenerating(false);
+        setIsError(true);
+        setGenerateMsg(`Server error ${res.status}: Failed to initiate generation.`);
+        return;
       }
+      setGenerateMsg("Pipeline running. AI agents are collecting and writing articles...");
+      startPolling();
     } catch (err: any) {
       console.error("Failed to trigger generation:", err);
-      setGenerateMsg("Failed to connect to backend server. Please verify backend is running.");
-    } finally {
-      setTimeout(() => {
-        mutate();
-        setGenerating(false);
-      }, 5000);
+      setGenerating(false);
+      setIsError(true);
+      setGenerateMsg("Connection failed. Please check backend status.");
     }
   };
 
@@ -59,15 +122,32 @@ export default function FrontPage() {
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="px-4 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded text-xs font-sans font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-stone-800 transition-all shadow-sm disabled:opacity-50"
+            className={`px-4 py-2.5 rounded text-xs font-sans font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm ${
+              generating
+                ? "bg-amber-600 text-white cursor-wait opacity-90 animate-pulse"
+                : "bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 hover:bg-stone-800"
+            }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${generating ? "animate-spin" : ""}`} />
-            {generating ? "Publishing Edition..." : "Trigger Live Publish"}
+            <RefreshCw className={`w-4 h-4 ${generating ? "animate-spin" : ""}`} />
+            {generating ? "Publishing News in Progress..." : "Trigger Live Publish"}
           </button>
           {generateMsg && (
-            <p className="text-xs font-sans text-stone-600 dark:text-stone-300 italic">
-              {generateMsg}
-            </p>
+            <div className={`flex items-center gap-1.5 text-xs font-sans px-2.5 py-1 rounded border max-w-md text-right ${
+              isError
+                ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800"
+                : generating
+                ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                : "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+            }`}>
+              {isError ? (
+                <AlertCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400 shrink-0" />
+              ) : generating ? (
+                <RefreshCw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-spin shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              )}
+              <span>{generateMsg}</span>
+            </div>
           )}
         </div>
       </div>
